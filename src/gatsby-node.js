@@ -1,5 +1,4 @@
 const webpack = require("webpack")
-const { isMatch } = require("./util")
 
 function flattenMessages(nestedMessages, prefix = "") {
   return Object.keys(nestedMessages).reduce((messages, key) => {
@@ -23,18 +22,16 @@ exports.onCreateWebpackConfig = ({ actions, plugins }, pluginOptions) => {
   }
   const regex = new RegExp(languages.map(l => l.split("-")[0]).join("|"))
   actions.setWebpackConfig({
-    resolve: { fallback: { path: require.resolve("path-browserify") } },
     plugins: [
       plugins.define({
         GATSBY_INTL_REDIRECT_COMPONENT_PATH: JSON.stringify(redirectComponent),
-        "process.platform": JSON.stringify("linux"),
       }),
       new webpack.ContextReplacementPlugin(
-        /@formatjs[/\\]intl-relativetimeformat[/\\]locale-data$/,
+        /@formatjs[/\\]intl-relativetimeformat[/\\]dist[/\\]locale-data$/,
         regex
       ),
       new webpack.ContextReplacementPlugin(
-        /@formatjs[/\\]intl-pluralrules[/\\]locale-data$/,
+        /@formatjs[/\\]intl-pluralrules[/\\]dist[/\\]locale-data$/,
         regex
       ),
     ],
@@ -53,8 +50,6 @@ exports.onCreatePage = async ({ page, actions }, pluginOptions) => {
     defaultLanguage = "en",
     redirect = false,
     createDefault = true,
-    ignoredPaths = [],
-    redirectDefaultLanguageToRoot = false,
   } = pluginOptions
 
   const getMessages = (path, language) => {
@@ -94,9 +89,7 @@ exports.onCreatePage = async ({ page, actions }, pluginOptions) => {
           routed,
           originalPath: page.path,
           redirect,
-          redirectDefaultLanguageToRoot,
           defaultLanguage,
-          ignoredPaths,
         },
       },
     }
@@ -110,22 +103,11 @@ exports.onCreatePage = async ({ page, actions }, pluginOptions) => {
   }
   
   languages.forEach(language => {
-    // check ignore paths, if matched then don't generate locale page
-    if (!isMatch(ignoredPaths, page.path)) {
-      if (
-        redirectDefaultLanguageToRoot === true &&
-        language === defaultLanguage
-      ) {
-        // default language will redirect to root, so there is no need to generate default langauge pages
-        // do nothing
-      } else {
-        const localePage = generatePage(true, language)
-        const regexp = new RegExp("/404/?$")
-        if (regexp.test(localePage.path)) {
-          localePage.matchPath = `/${language}/*`
-        }
-        createPage(localePage)
-      }
+    const localePage = generatePage(true, language)
+    const regexp = new RegExp("/404/?$")
+    if (regexp.test(localePage.path)) {
+      localePage.matchPath = `/${language}/*`
     }
+    createPage(localePage)
   })
 }

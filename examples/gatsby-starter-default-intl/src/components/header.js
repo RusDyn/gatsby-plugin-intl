@@ -1,4 +1,4 @@
-import { Link } from "gatsby-plugin-react-intl"
+import { Link } from "gatsby-plugin-intl"
 import PropTypes from "prop-types"
 import React from "react"
 import Language from "./language"

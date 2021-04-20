@@ -1,9 +1,9 @@
 import React from "react"
 import browserLang from "browser-lang"
-import { navigate } from "gatsby"
+import { withPrefix } from "gatsby"
 import { IntlProvider } from "react-intl"
 import { IntlContextProvider } from "./intl-context"
-import { isMatch } from "./util"
+
 const preferDefault = m => (m && m.default) || m
 
 const polyfillIntl = language => {
@@ -11,19 +11,19 @@ const polyfillIntl = language => {
   try {
     if (!Intl.PluralRules) {
       require("@formatjs/intl-pluralrules/polyfill")
-      require(`@formatjs/intl-pluralrules/locale-data/${locale}`)
+      require(`@formatjs/intl-pluralrules/dist/locale-data/${locale}`)
     }
 
     if (!Intl.RelativeTimeFormat) {
       require("@formatjs/intl-relativetimeformat/polyfill")
-      require(`@formatjs/intl-relativetimeformat/locale-data/${locale}`)
+      require(`@formatjs/intl-relativetimeformat/dist/locale-data/${locale}`)
     }
   } catch (e) {
     throw new Error(`Cannot find react-intl/locale-data/${language}`)
   }
 }
 
-const withIntlProvider = intl => children => {
+const withIntlProvider = (intl) => children => {
   polyfillIntl(intl.language)
   return (
     <IntlProvider
@@ -58,21 +58,13 @@ export default ({ element, props }, pluginOptions) => {
   const { pageContext, location } = props
   const { defaultLanguage } = pluginOptions
   const { intl } = pageContext
-  const {
-    language,
-    languages,
-    redirect,
-    routed,
-    originalPath,
-    redirectDefaultLanguageToRoot,
-    ignoredPaths,
-  } = intl
+  const { language, languages, redirect, routed, originalPath } = intl
 
   if (typeof window !== "undefined") {
     window.___gatsbyIntl = intl
   }
   /* eslint-disable no-undef */
-  let isRedirect = redirect && !routed
+  const isRedirect = redirect && !routed
 
   if (isRedirect) {
     const { search } = location
@@ -89,38 +81,19 @@ export default ({ element, props }, pluginOptions) => {
       if (!languages.includes(detected)) {
         detected = language
       }
-      const isMatchedIgnoredPaths = isMatch(
-        ignoredPaths,
-        window.location.pathname
-      )
-      isRedirect =
-        !(redirectDefaultLanguageToRoot && detected === defaultLanguage) &&
-        !isMatchedIgnoredPaths
 
-      if (isRedirect) {
-        const queryParams = search || ""
-        const newUrl = `/${detected}${originalPath}${queryParams}`
-        window.localStorage.setItem("gatsby-intl-language", detected)
-
-        navigate(newUrl, {
-          replace: true,
-        })
-        // browser should render redirect element
-        const renderElement =
-          GATSBY_INTL_REDIRECT_COMPONENT_PATH &&
-          React.createElement(
-            preferDefault(require(GATSBY_INTL_REDIRECT_COMPONENT_PATH))
-          )
-        return withIntlProvider(intl)(renderElement)
-      }
+      const queryParams = search || ""
+      const newPath = replaceParams(location.pathname, props)
+      const newUrl = withPrefix(`/${detected}${newPath}${queryParams}`)
+      window.localStorage.setItem("gatsby-intl-language", detected)
+      window.location.replace(newUrl)
     }
   }
-  const renderElement =
-    isRedirect && !redirectDefaultLanguageToRoot
-      ? GATSBY_INTL_REDIRECT_COMPONENT_PATH &&
-        React.createElement(
-          preferDefault(require(GATSBY_INTL_REDIRECT_COMPONENT_PATH))
-        )
-      : element
+  const renderElement = isRedirect
+    ? GATSBY_INTL_REDIRECT_COMPONENT_PATH &&
+      React.createElement(
+        preferDefault(require(GATSBY_INTL_REDIRECT_COMPONENT_PATH))
+      )
+    : element
   return withIntlProvider(intl)(renderElement)
 }

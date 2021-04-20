@@ -2,19 +2,12 @@ import React from "react"
 import PropTypes from "prop-types"
 import { Link as GatsbyLink, navigate as gatsbyNavigate } from "gatsby"
 import { IntlContextConsumer } from "./intl-context"
-import { isMatch } from "./util"
 
 const Link = ({ to, language, children, onClick, ...rest }) => (
   <IntlContextConsumer>
     {intl => {
       const languageLink = language || intl.language
-
-      const isMatchedIgnoredPaths = isMatch(intl.ignoredPaths, to)
-
-      const link =
-        (intl.routed || language) && !isMatchedIgnoredPaths
-          ? `/${languageLink}${to}`
-          : `${to}`
+      const link = intl.routed || language ? `/${languageLink}${to}` : `${to}`
 
       const handleClick = e => {
         if (language) {
@@ -51,10 +44,8 @@ export const navigate = (to, options) => {
     return
   }
 
-  const { language, routed, ignoredPaths } = window.___gatsbyIntl
-  const isMatchedIgnoredPaths = isMatch(ignoredPaths, to)
-
-  const link = routed && !isMatchedIgnoredPaths ? `/${language}${to}` : `${to}`
+  const { language, routed } = window.___gatsbyIntl
+  const link = routed ? `/${language}${to}` : `${to}`
   gatsbyNavigate(link, options)
 }
 
@@ -62,12 +53,7 @@ export const changeLocale = (language, to) => {
   if (typeof window === "undefined") {
     return
   }
-  const {
-    routed,
-    redirectDefaultLanguageToRoot,
-    defaultLanguage,
-    ignoredPaths,
-  } = window.___gatsbyIntl
+  const { routed } = window.___gatsbyIntl
 
   const removePrefix = pathname => {
     const base =
@@ -89,13 +75,7 @@ export const changeLocale = (language, to) => {
   const pathname =
     to || removeLocalePart(removePrefix(window.location.pathname))
   // TODO: check slash
-  const isMatchedIgnoredPaths = isMatch(ignoredPaths, pathname)
-  let languageLink =
-    (redirectDefaultLanguageToRoot && defaultLanguage === language) ||
-    isMatchedIgnoredPaths
-      ? ""
-      : `/${language}`
-  const link = `${languageLink}${pathname}${window.location.search}`
+  const link = `/${language}${pathname}${window.location.search}`
   localStorage.setItem("gatsby-intl-language", language)
   gatsbyNavigate(link)
 }
